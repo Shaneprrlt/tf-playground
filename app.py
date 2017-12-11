@@ -135,5 +135,44 @@ with graph5.as_default():
         # evaluate model accuracy
         eval_W, eval_b, eval_loss = session.run([W, b, loss_calc], { input_data: in_data, expected_output: out_data })
         print("W: %s, b: %s, loss: %s"%(eval_W, eval_b, eval_loss))
-    
+
+    session.close()
+
+# Graph6: Using TF Estimator API To Run Linear Regression
+# instead of writing it out by hand like in Graph 5
+
+graph_6 = tf.Graph()
+with graph_6.as_default():
+    logs_path = 'logs/graph6'
+
+    # linear regression estimator with a single feature column
+    feature_columns = [tf.feature_column.numeric_column('x', shape=[1])]
+    estimator = tf.estimator.LinearRegressor(feature_columns=feature_columns)
+
+    # training data
+    train_input_data = np.array([1.0,2.0,3.0,4.0])
+    train_expected_output_data = np.array([0.0,-1.0,-2.0,-3.0])
+
+    # evaluation data
+    eval_input_data = np.array([2.0,5.0,8.0,1.0])
+    eval_expected_output_data = np.array([-1.01,-4.1,-7.0,0.0])
+
+    # create input functions from numpy array data
+    input_fn = tf.estimator.inputs.numpy_input_fn({ 'x': train_input_data }, train_expected_output_data, batch_size=4, num_epochs=None, shuffle=True)
+    train_input_fn = tf.estimator.inputs.numpy_input_fn({ 'x': train_input_data }, train_expected_output_data, batch_size=4, num_epochs=1000, shuffle=False)
+    eval_input_fn = tf.estimator.inputs.numpy_input_fn({ 'x': eval_input_data }, eval_expected_output_data, batch_size=4, num_epochs=1000, shuffle=False)
+
+    # evalulate the accuracy of the model
+    with tf.Session() as session:
+        writer = tf.summary.FileWriter(logs_path, graph=session.graph)
+
+        # train our linear regressor over 1000 epochs
+        estimator.train(input_fn=input_fn, steps=1000)
+
+        # evaluate the model
+        train_metrics = estimator.evaluate(input_fn=train_input_fn)
+        eval_metrics = estimator.evaluate(input_fn=eval_input_fn)
+        print('train metrics %r'%(train_metrics))
+        print('eval metrics %r'%(eval_metrics))
+
     session.close()
